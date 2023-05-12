@@ -18,7 +18,7 @@ class Cache:
       utils.savePickle(data, self.fbase)
   def loadPickle(self):
     if not self.load:
-      return None
+      return self.data
 
     if self.data is None:
       self.data = utils.loadPickle(self.fbase)
@@ -30,7 +30,7 @@ class Cache:
       utils.saveDf(df, self.fbase, name)
   def loadDf(self, name):
     if not self.load:
-      return None
+      return self.dfs.get(name, None)
 
     if name not in self.dfs.keys():
       self.dfs[name] = utils.loadDf(self.fbase, name)

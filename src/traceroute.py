@@ -7,7 +7,7 @@ import sys
 from time import *
 from datetime import datetime
 
-import analyze
+from analyze import process
 from cache import Cache
 import utils
 from utils import log
@@ -27,13 +27,13 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
         res.append({'src': ans.src, 'rtt': rtt})
         success |= ans[scapy.ICMP].type == 0 # TODO: Check this is correct
         break
-    else:
-      log(f'[pingTtl] No answer {ttl=} {i=}', level = 'deepDebug')
 
+  if len(res) == 0:
+    log(f'[pingTtl] No answers {dst=} {ttl=}', level = 'warning')
   return res, success
 
 def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
-  log(f'[traceroute] {dst=} {maxTtl=}, {n=}, {timeout=}, {maxRetries=}', level = 'user')
+  log(f'[traceroute] START {dst=} {maxTtl=}, {n=}, {timeout=}, {maxRetries=}', level = 'user')
 
   pingTtl(dst, maxTtl + 1, n = 1)
 
@@ -47,14 +47,14 @@ def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
 
   res = ((maxTtl, n, timeout, maxRetries, success), data)
   cache.savePickle(res)
-  log(f'[traceroute] {success=}', level = 'user')
+  log(f'[traceroute] END {success=}', level = 'user')
   return res
 
 def tracerouteHosts(hosts, fbase, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   for dst in hosts:
     cache = Cache(f'{fbase}_{dst}', load = False)
-    traceroute(dst, cache, maxTtl= 5, n = 1)
-    # TODO: Process
+    traceroute(dst, cache, maxTtl, n, timeout, maxRetries)
+    process(cache)
 
 if __name__ == '__main__':
   user = sys.argv[1]
@@ -68,9 +68,11 @@ if __name__ == '__main__':
 
   threads = []
   for idx, tHosts in enumerate(np.array_split(hosts, 10)):
+    # t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase), kwargs = {'maxTtl': 5, 'n': 1}) # TODO: Remove kwargs to use default
     t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase))
     threads.append(t)
     t.start()
 
   for t in threads:
     t.join()
+  log('ALL DONE', level = 'user')
