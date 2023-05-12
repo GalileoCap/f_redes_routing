@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import scapy.all as scapy
+import numpy as np
+import threading
 
 import sys
 from time import *
@@ -30,7 +32,7 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
 
   return res, success
 
-def traceroute(dst, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
+def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   log(f'[traceroute] {dst=} {maxTtl=}, {n=}, {timeout=}, {maxRetries=}', level = 'user')
 
   pingTtl(dst, maxTtl + 1, n = 1)
@@ -43,19 +45,16 @@ def traceroute(dst, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
       success = True
       break
 
+  res = ((maxTtl, n, timeout, maxRetries, success), data)
+  cache.savePickle(res)
   log(f'[traceroute] {success=}', level = 'user')
-  return data, success
-
-def tracerouteHosts(hosts, fbase, save = True, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
-  data = {
-    host: traceroute(host, maxTtl, n, timeout, maxRetries)
-    for host in hosts
-  }
-
-  res = ((maxTtl, n, timeout, maxRetries), data)
-  if save:
-    utils.savePickle(res, fbase)
   return res
+
+def tracerouteHosts(hosts, fbase, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
+  for dst in hosts:
+    cache = Cache(f'{fbase}_{dst}', load = False)
+    traceroute(dst, cache, maxTtl= 5, n = 1)
+    # TODO: Process
 
 if __name__ == '__main__':
   user = sys.argv[1]
@@ -67,5 +66,11 @@ if __name__ == '__main__':
   with open(hostsPath, 'r') as fin:
     hosts = fin.read().splitlines()
 
-  info, data = tracerouteHosts(hosts, fbase, maxTtl= 5, n = 1)
-  analyze.analyze(info, data, Cache(fbase, load = False))
+  threads = []
+  for idx, tHosts in enumerate(np.array_split(hosts, 10)):
+    t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase))
+    threads.append(t)
+    t.start()
+
+  for t in threads:
+    t.join()

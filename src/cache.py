@@ -10,6 +10,19 @@ class Cache:
     self.load = load
 
     self.dfs = {}
+    self.data = None
+
+  def savePickle(self, data):
+    self.data = data
+    if self.save:
+      utils.savePickle(data, self.fbase)
+  def loadPickle(self):
+    if not self.load:
+      return None
+
+    if self.data is None:
+      self.data = utils.loadPickle(self.fbase)
+    return self.data
 
   def saveDf(self, df, name):
     self.dfs[name] = df
@@ -20,13 +33,11 @@ class Cache:
       return None
 
     if name not in self.dfs.keys():
-      df = utils.loadDf(self.fbase, name)
-      if df is None:
-        return None
-      self.dfs[name] = df
+      self.dfs[name] = utils.loadDf(self.fbase, name)
     return self.dfs[name]
 
   # TODO: loadAll
   def flush(self):
     for name, df in self.dfs.items():
       self.saveDf(df, name)
+    self.savePickle(self.data)
