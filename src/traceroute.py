@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import scapy.all as scapy
+import numpy as np
+import threading
 
 import sys
 from time import *
@@ -48,6 +50,12 @@ def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   log(f'[traceroute] {success=}', level = 'user')
   return res
 
+def tracerouteHosts(hosts, fbase, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
+  for dst in hosts:
+    cache = Cache(f'{fbase}_{dst}', load = False)
+    traceroute(dst, cache, maxTtl= 5, n = 1)
+    # TODO: Process
+
 if __name__ == '__main__':
   user = sys.argv[1]
   hostsPath = sys.argv[2]
@@ -58,7 +66,11 @@ if __name__ == '__main__':
   with open(hostsPath, 'r') as fin:
     hosts = fin.read().splitlines()
 
-  for dst in hosts:
-    cache = Cache(f'{user}_{date}_{dst}', load = False)
-    traceroute(dst, cache, maxTtl= 5, n = 1)
-    # analyze.analyze(info, data, cache)
+  threads = []
+  for idx, tHosts in enumerate(np.array_split(hosts, 10)):
+    t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase))
+    threads.append(t)
+    t.start()
+
+  for t in threads:
+    t.join()
