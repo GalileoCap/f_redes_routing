@@ -52,15 +52,18 @@ def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
 
 def tracerouteHosts(hosts, fbase, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   for dst in hosts:
-    cache = Cache(f'{fbase}_{dst}', load = False)
-    traceroute(dst, cache, maxTtl, n, timeout, maxRetries)
-    process(cache)
+    try:
+      cache = Cache(f'{fbase}_{dst}', load = False)
+      traceroute(dst, cache, maxTtl, n, timeout, maxRetries)
+      process(cache)
+    except Exception as e:
+      log(f'[tracerouteHosts] ERROR {dst=}: {e}', level = 'error')
 
 if __name__ == '__main__':
   user = sys.argv[1]
   hostsPath = sys.argv[2]
   date = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
-  fbase = f'{user}_{date}' #TODO: user_host_date
+  fbase = f'{user}_{date}'
 
   hosts = []
   with open(hostsPath, 'r') as fin:
