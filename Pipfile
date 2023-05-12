@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 scapy = "*"
+numpy = "*"
+pandas = "*"
+requests = "*"
 
 [dev-packages]
 

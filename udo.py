@@ -38,6 +38,6 @@ def TaskAnalyze():
 
     'capture': 1,
     'actions': [
-      'pipenv run python src/analyze.py'
+      'pipenv run sudo python src/analyze.py'
     ],
   }

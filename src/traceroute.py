@@ -5,6 +5,8 @@ import sys
 from time import *
 from datetime import datetime
 
+import analyze
+from cache import Cache
 import utils
 from utils import log
 
@@ -48,9 +50,10 @@ def tracerouteHosts(hosts, fbase, save = True, maxTtl = 64, n = 30, timeout = 0.
     for host in hosts
   }
 
+  res = ((maxTtl, n, timeout, maxRetries), data)
   if save:
-    utils.savePickle(((maxTtl, n, timeout, maxRetries), data), fbase)
-  return data
+    utils.savePickle(res, fbase)
+  return res
 
 if __name__ == '__main__':
   user = sys.argv[1]
@@ -62,4 +65,5 @@ if __name__ == '__main__':
     'argentina.gob.ar',
     # 'dc.uba.ar',
   ]
-  tracerouteHosts(hosts, fbase, n = 5)
+  info, data = tracerouteHosts(hosts, fbase)
+  analyze.analyze(info, data, Cache(fbase, load = False))
