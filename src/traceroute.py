@@ -30,8 +30,10 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
 
   return res, success
 
-def traceroute(dst, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
+def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   log(f'[traceroute] {dst=} {maxTtl=}, {n=}, {timeout=}, {maxRetries=}', level = 'user')
+
+  pingTtl(dst, maxTtl + 1, n = 1)
 
   data, success = [], False
   for ttl in range(1, maxTtl):
@@ -41,29 +43,22 @@ def traceroute(dst, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
       success = True
       break
 
+  res = ((maxTtl, n, timeout, maxRetries, success), data)
+  cache.savePickle(res)
   log(f'[traceroute] {success=}', level = 'user')
-  return data, success
-
-def tracerouteHosts(hosts, fbase, save = True, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
-  data = {
-    host: traceroute(host, maxTtl, n, timeout, maxRetries)
-    for host in hosts
-  }
-
-  res = ((maxTtl, n, timeout, maxRetries), data)
-  if save:
-    utils.savePickle(res, fbase)
   return res
 
 if __name__ == '__main__':
   user = sys.argv[1]
+  hostsPath = sys.argv[2]
   date = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
   fbase = f'{user}_{date}'
 
-  hosts = [
-    'galileocap.me', 'youtube.com',
-    'argentina.gob.ar',
-    # 'dc.uba.ar',
-  ]
-  info, data = tracerouteHosts(hosts, fbase)
-  analyze.analyze(info, data, Cache(fbase, load = False))
+  hosts = []
+  with open(hostsPath, 'r') as fin:
+    hosts = fin.read().splitlines()
+
+  for dst in hosts:
+    cache = Cache(f'{user}_{date}_{dst}', load = False)
+    traceroute(dst, cache, maxTtl= 5, n = 1)
+    # analyze.analyze(info, data, cache)
