@@ -26,7 +26,7 @@ def TaskTraceroute():
 
     'capture': 1,
     'actions': [
-      'pipenv run sudo python src/traceroute.py $USER'
+      'pipenv run sudo python src/traceroute.py $USER hosts.txt'
     ],
   }
 

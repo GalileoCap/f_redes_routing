@@ -33,6 +33,8 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
 def traceroute(dst, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
   log(f'[traceroute] {dst=} {maxTtl=}, {n=}, {timeout=}, {maxRetries=}', level = 'user')
 
+  pingTtl(dst, maxTtl + 1, n = 1)
+
   data, success = [], False
   for ttl in range(1, maxTtl):
     ttlData, _success = pingTtl(dst, ttl, n, timeout, maxRetries)
@@ -57,13 +59,13 @@ def tracerouteHosts(hosts, fbase, save = True, maxTtl = 64, n = 30, timeout = 0.
 
 if __name__ == '__main__':
   user = sys.argv[1]
+  hostsPath = sys.argv[2]
   date = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
-  fbase = f'{user}_{date}'
+  fbase = f'{user}_{date}' #TODO: user_host_date
 
-  hosts = [
-    'galileocap.me', 'youtube.com',
-    'argentina.gob.ar',
-    # 'dc.uba.ar',
-  ]
-  info, data = tracerouteHosts(hosts, fbase)
+  hosts = []
+  with open(hostsPath, 'r') as fin:
+    hosts = fin.read().splitlines()
+
+  info, data = tracerouteHosts(hosts, fbase, maxTtl= 5, n = 1)
   analyze.analyze(info, data, Cache(fbase, load = False))
