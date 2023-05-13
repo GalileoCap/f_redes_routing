@@ -62,9 +62,9 @@ def analyze(cache):
   df.dropna(subset=['src', 'rtt'], inplace = True)
 
   df['drtt'] = df['rtt'].diff()
-  # df.drop(df[df['drtt'] > 0].index, inplace = True)
+  df.drop(df[df['drtt'] < 0].index, inplace = True)
   # while df['drtt'].min() < 0:
-    # df.drop(df[df['drtt'] > 0].index, inplace = True)
+    # df.drop(df[df['drtt'] < 0].index, inplace = True)
     # df['drtt'] = df['rtt'].diff()
 
   df['dlat'] = df['lat'].diff()
