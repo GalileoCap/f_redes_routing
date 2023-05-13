@@ -23,25 +23,34 @@ def thompsonT(n, alpha = 0.05):
   t = stats.t.ppf(1 - alpha/2, n - 2)
   return (t * (n - 1)) / (np.sqrt(n) * np.sqrt(n - 2 + t**2))
 
-def cimbalaMethod(df, alpha = 0.05):
-  df['cimbala_pred'] = False
+def cimbalaMethod(df, column, alpha = 0.05, alt = False):
+  key = 'cimbalaAlt_pred' if alt else 'cimbala_pred'
+
+  df[key] = False
   if len(df) < 3:
     log('[cimbalaMethod] Not enough data points', level = 'error')
     return None
 
+  # if not alt:
+    # print('deviation', abs(df[column] - df[column].mean()))
+
   while True:
-    _df = df[~df['cimbala_pred']][['drtt']].copy()
-    _df.dropna(subset=['drtt'], inplace = True)
+    _df = df[~df[key]][[column]].copy()
+    _df.dropna(subset=[column], inplace = True)
     if len(_df) == 0:
       break
 
-    _df['deviation'] = (_df['drtt'] - _df['drtt'].mean())
+    _df['deviation'] = abs(_df[column] - _df[column].mean())
     maxDeviationIdx = _df['deviation'].idxmax()
 
-    tS = thompsonT(df['drtt'].count(), alpha) * _df['drtt'].std()
-    print(_df.at[maxDeviationIdx, 'deviation'], tS)
+    tS = 0
+    if alt:
+      tS = 0.1 # TODO: Valor de corte fijo
+    else:
+      tS = thompsonT(_df[column].count(), alpha) * _df[column].std()
+
     if _df.at[maxDeviationIdx, 'deviation'] > tS: # Is an outlier
-      df.at[maxDeviationIdx, 'cimbala_pred'] = True
+      df.at[maxDeviationIdx, key] = True
     else: # There are no more outliers
       break
 
@@ -69,15 +78,16 @@ def analyze(cache):
   df['distance'] = np.sqrt(df['dlat'] ** 2 + df['dlong'] ** 2)
 
   naiveMethod(df)
-  cimbalaMethod(df)
   graphMethod(df)
+  cimbalaMethod(df, 'drtt')
+  cimbalaMethod(df, 'drtt', alt = True)
 
   # cache.saveDf(df, dfName) # TODO: Uncomment once done
   return df
   
 def report(cache):
   df = analyze(cache)
-  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'graph_pred']], sep = '\n')
+  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'graph_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
 
 if __name__ == '__main__':
   files = sys.argv[1:] if len(sys.argv) >= 2 else utils.getAllDataFiles()
