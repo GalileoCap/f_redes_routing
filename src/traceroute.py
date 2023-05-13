@@ -7,7 +7,7 @@ import sys
 from time import *
 from datetime import datetime
 
-from analyze import process
+from process import process
 from cache import Cache
 import utils
 from utils import log

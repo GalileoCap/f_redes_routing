@@ -17,9 +17,6 @@ class Cache:
     if self.save:
       utils.savePickle(data, self.fbase)
   def loadPickle(self):
-    if not self.load:
-      return self.data
-
     if self.data is None:
       self.data = utils.loadPickle(self.fbase)
     return self.data
