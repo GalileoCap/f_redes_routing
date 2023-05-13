@@ -13,8 +13,8 @@ from utils import log
 #############################################################
 # S: Our naive method #######################################
 
-def naiveMethod(df):
-  df['naive_pred'] = df['drtt'] >= 0.1
+def naiveMethod(df, column, cutoff = 0.1):
+  df['naive_pred'] = df[column] >= cutoff
 
 #############################################################
 # S: Cimbala's method #######################################
@@ -24,16 +24,13 @@ def thompsonT(n, alpha = 0.05):
   t = stats.t.ppf(1 - alpha/2, n - 2)
   return (t * (n - 1)) / (np.sqrt(n) * np.sqrt(n - 2 + t**2))
 
-def cimbalaMethod(df, column, alpha = 0.05, alt = False):
-  key = 'cimbalaAlt_pred' if alt else 'cimbala_pred'
+def cimbalaMethod(df, column, alpha = 0.05, altCutoff = None):
+  key = 'cimbala_pred' if altCutoff is None else 'cimbalaAlt_pred'
 
   df[key] = False
   if len(df) < 3:
     log('[cimbalaMethod] Not enough data points', level = 'error')
     return None
-
-  # if not alt:
-    # print('deviation', abs(df[column] - df[column].mean()))
 
   while True:
     _df = df[~df[key]][[column]].copy()
@@ -44,16 +41,51 @@ def cimbalaMethod(df, column, alpha = 0.05, alt = False):
     _df['deviation'] = abs(_df[column] - _df[column].mean())
     maxDeviationIdx = _df['deviation'].idxmax()
 
-    tS = 0
-    if alt:
-      tS = 0.1 # TODO: Valor de corte fijo
-    else:
+    tS = altCutoff
+    if tS is None:
       tS = thompsonT(_df[column].count(), alpha) * _df[column].std()
 
     if _df.at[maxDeviationIdx, 'deviation'] > tS: # Is an outlier
       df.at[maxDeviationIdx, key] = True
     else: # There are no more outliers
       break
+
+def analyze(cache):
+  dfName = 'dfA' # TODO: Better name
+  df = cache.loadDf(dfName)
+  if df is not None:
+    return df
+
+  log(f'[analyze] fbase={cache.fbase}', level = 'user')
+  df = process(cache)
+
+  df.dropna(subset=['src', 'rtt'], inplace = True)
+
+  df['drtt'] = df['rtt'].diff()
+  # df.drop(df[df['drtt'] > 0].index, inplace = True)
+  # while df['drtt'].min() < 0:
+    # df.drop(df[df['drtt'] > 0].index, inplace = True)
+    # df['drtt'] = df['rtt'].diff()
+
+  df['dlat'] = df['lat'].diff()
+  df['dlong'] = df['long'].diff()
+  df['distance'] = np.sqrt(df['dlat'] ** 2 + df['dlong'] ** 2)
+
+  naiveMethod(df, 'drtt')
+  cimbalaMethod(df, 'drtt')
+  cimbalaMethod(df, 'drtt', altCutoff = 0.1) # TODO: altCutoff
+
+  addToGraph(df)
+
+  # cache.saveDf(df, dfName) # TODO: Uncomment once done
+  return df
+  
+def report(cache):
+  df = analyze(cache)
+  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+
+############################################################
+# S: Graph #################################################
 
 Nodes = {}
 Edges = {}
@@ -82,41 +114,39 @@ def addToGraph(df):
   df.apply(row2Edge, axis = 'columns')
   df.drop('idx', axis = 'columns', inplace = True)
 
-def analyze(cache):
-  dfName = 'dfA' # TODO: Better name
-  df = cache.loadDf(dfName)
-  if df is not None:
-    return df
+def reportGraph(cache):
+  # TODO: Save graphData
+  G = nx.Graph()
+  for v, data in Nodes.items():
+    G.add_node(v, count = len(data), **data[0]) # TODO: Check no differences in location labeling
 
-  log(f'[analyze] fbase={cache.fbase}', level = 'user')
-  df = process(cache)
+  edgesData = []
+  for e, data in Edges.items():
+    _data = {
+      'e': e,
+      'count': len(data),
+      'rtt': np.mean([dataPoint['rtt'] for dataPoint in data]),
+      'length': data[0]['length'], # TODO: Check no differences in location labeling
+      'naive_pred_mean': np.mean([int(dataPoint['naive_pred']) for dataPoint in data]),
+      'cimbala_pred_mean': np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data]),
+      'cimbalaAlt_pred_mean': np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data]),
+    }
+    edgesData.append(_data)
+    G.add_edge(*e, **_data)
 
-  df.dropna(subset=['src', 'rtt'], inplace = True)
+  df = pd.DataFrame(edgesData)
+  naiveMethod(df, 'rtt')
+  cimbalaMethod(df, 'rtt')
+  cimbalaMethod(df, 'rtt', altCutoff = 0.1) # TODO: altCutoff
 
-  df['drtt'] = df['rtt'].diff()
-  # df.drop(df[df['drtt'] > 0].index, inplace = True)
-  # while df['drtt'].min() < 0:
-    # df.drop(df[df['drtt'] > 0].index, inplace = True)
-    # df['drtt'] = df['rtt'].diff()
-
-  df['dlat'] = df['lat'].diff()
-  df['dlong'] = df['long'].diff()
-  df['distance'] = np.sqrt(df['dlat'] ** 2 + df['dlong'] ** 2)
-
-  naiveMethod(df)
-  cimbalaMethod(df, 'drtt')
-  cimbalaMethod(df, 'drtt', alt = True)
-
-  addToGraph(df)
-
-  # cache.saveDf(df, dfName) # TODO: Uncomment once done
-  return df
-  
-def report(cache):
-  df = analyze(cache)
-  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+  print(G)
+  print(df[['e', 'count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']])
+  # print(G.nodes['200.51.241.1'])
+  # print(G.edges['192.168.1.1', '200.51.241.1'])
 
 if __name__ == '__main__':
+  pd.set_option('display.max_columns', None)
+
   files = sys.argv[1:] if len(sys.argv) >= 2 else utils.getAllDataFiles()
   save = True
   load = True
@@ -128,20 +158,4 @@ if __name__ == '__main__':
       log('[analyzeCase] No pickle for {fbase}', level = 'error')
     else:
       report(cache)
-
-  # TODO: Save graphData
-  G = nx.Graph()
-  for v, data in Nodes.items():
-    G.add_node(v, count = len(data), **data[0]) # TODO: Check no differences in location labeling
-
-  for e, data in Edges.items():
-    rtt = np.mean([dataPoint['rtt'] for dataPoint in data])
-    length = data[0]['length'] # TODO: Check no differences in location labeling
-    naive_pred = np.mean([int(dataPoint['naive_pred']) for dataPoint in data])
-    cimbala_pred = np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data])
-    cimbalaAlt_pred = np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data])
-    G.add_edge(*e, count = len(data), rtt = rtt, length = length, naive_pred = naive_pred, cimbala_pred = cimbala_pred, cimbalaAlt_pred = cimbalaAlt_pred)
-
-  print(G)
-  print(G.nodes['200.51.241.1'])
-  print(G.edges['192.168.1.1', '200.51.241.1'])
+  reportGraph(cache)
