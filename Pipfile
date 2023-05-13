@@ -9,6 +9,7 @@ numpy = "*"
 pandas = "*"
 requests = "*"
 scipy = "*"
+networkx = "*"
 
 [dev-packages]
 

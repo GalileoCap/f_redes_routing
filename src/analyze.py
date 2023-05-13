@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import pandas as pd
+import networkx as nx
 import numpy as np
 from scipy import stats
 
@@ -54,8 +55,32 @@ def cimbalaMethod(df, column, alpha = 0.05, alt = False):
     else: # There are no more outliers
       break
 
-def graphMethod(df):
-  df['graph_pred'] = False
+Nodes = {}
+Edges = {}
+
+def addToGraph(df):
+  def row2Edge(row):
+    u = row['src']
+    Nodes[u] = Nodes.get(u, []) + [{
+      'country': row['country'],
+      'lat': row['lat'],
+      'long': row['long'],
+    }]
+
+    v = row['prev']
+    if v is not None: # First node is the source and has no prev
+      Edges[(v, u)] = Edges.get((v, u), []) + [{
+        'rtt': row['drtt'],
+        'length': row['distance'],
+        'naive_pred': row['naive_pred'],
+        'cimbala_pred': row['cimbala_pred'],
+        'cimbalaAlt_pred': row['cimbalaAlt_pred'],
+      }]
+
+  df['prev'] = df['src'].shift(1)
+  df['idx'] = df.index # Hack to use index in row2Edge
+  df.apply(row2Edge, axis = 'columns')
+  df.drop('idx', axis = 'columns', inplace = True)
 
 def analyze(cache):
   dfName = 'dfA' # TODO: Better name
@@ -69,8 +94,9 @@ def analyze(cache):
   df.dropna(subset=['src', 'rtt'], inplace = True)
 
   df['drtt'] = df['rtt'].diff()
+  # df.drop(df[df['drtt'] > 0].index, inplace = True)
   # while df['drtt'].min() < 0:
-    # df = df[df['drtt'] > 0]
+    # df.drop(df[df['drtt'] > 0].index, inplace = True)
     # df['drtt'] = df['rtt'].diff()
 
   df['dlat'] = df['lat'].diff()
@@ -78,16 +104,17 @@ def analyze(cache):
   df['distance'] = np.sqrt(df['dlat'] ** 2 + df['dlong'] ** 2)
 
   naiveMethod(df)
-  graphMethod(df)
   cimbalaMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt', alt = True)
+
+  addToGraph(df)
 
   # cache.saveDf(df, dfName) # TODO: Uncomment once done
   return df
   
 def report(cache):
   df = analyze(cache)
-  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'graph_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
 
 if __name__ == '__main__':
   files = sys.argv[1:] if len(sys.argv) >= 2 else utils.getAllDataFiles()
@@ -101,3 +128,20 @@ if __name__ == '__main__':
       log('[analyzeCase] No pickle for {fbase}', level = 'error')
     else:
       report(cache)
+
+  # TODO: Save graphData
+  G = nx.Graph()
+  for v, data in Nodes.items():
+    G.add_node(v, count = len(data), **data[0]) # TODO: Check no differences in location labeling
+
+  for e, data in Edges.items():
+    rtt = np.mean([dataPoint['rtt'] for dataPoint in data])
+    length = data[0]['length'] # TODO: Check no differences in location labeling
+    naive_pred = np.mean([int(dataPoint['naive_pred']) for dataPoint in data])
+    cimbala_pred = np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data])
+    cimbalaAlt_pred = np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data])
+    G.add_edge(*e, count = len(data), rtt = rtt, length = length, naive_pred = naive_pred, cimbala_pred = cimbala_pred, cimbalaAlt_pred = cimbalaAlt_pred)
+
+  print(G)
+  print(G.nodes['200.51.241.1'])
+  print(G.edges['192.168.1.1', '200.51.241.1'])
