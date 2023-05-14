@@ -5,7 +5,23 @@ import networkx as nx
 import utils
 
 ############################################################
-# S: Plots #################################################
+# S: droppedPlot ###########################################
+
+def droppedPlot(dropNa, dropDrtt):
+  fig = go.Figure(go.Histogram(
+    # x = [total for total, _ in dropNa]
+    x = [pct for _, pct in dropNa]
+  ))
+  utils.saveFig(fig, 'dropNa')
+
+  fig = go.Figure(go.Histogram(
+    # x = [total for total, _ in dropDrtt]
+    x = [pct for _, pct in dropDrtt]
+  ))
+  utils.saveFig(fig, 'dropDrtt')
+
+############################################################
+# S: graphPlot #############################################
 
 def graphPlot(G, dfNodes, dfEdges):
   pos = nx.spring_layout(G)
@@ -72,7 +88,10 @@ def graphPlot(G, dfNodes, dfEdges):
   ))
   utils.saveFig(fig, 'graph')
 
-def worldPlot(dfNodes, dfEdges):
+############################################################
+# S: worldPlot #############################################
+
+def _worldPlot(name, dfNodes, dfEdges, getOpacity, nodeColor = 'red', edgeColor = 'red'):
   fig = go.Figure()
 
   for _, row in dfEdges.iterrows():
@@ -82,8 +101,8 @@ def worldPlot(dfNodes, dfEdges):
       # lat = (row['start_lat'], row['end_lat']),
       # long = (row['start_long'], row['end_long']),
       mode = 'lines',
-      line = dict(width = 1, color = 'red'),
-      opacity = float(row['count'] / dfEdges['count'].max()),
+      line = dict(width = 1, color = edgeColor),
+      opacity = getOpacity(row)
     ))
 
   fig.add_trace(go.Scattergeo(
@@ -94,7 +113,7 @@ def worldPlot(dfNodes, dfEdges):
     mode = 'markers',
     marker = dict(
       size = 2,
-      color = 'rgb(255, 0, 0)',
+      color = nodeColor,
       line = dict(
         width = 3,
         color = 'rgba(68, 68, 68, 0)',
@@ -109,4 +128,15 @@ def worldPlot(dfNodes, dfEdges):
     ),
   )
 
-  utils.saveFig(fig, 'world')
+  utils.saveFig(fig, name)
+
+def worldPlot(dfNodes, dfEdges):
+  _worldPlot('world_count', dfNodes, dfEdges, lambda row: float(row['count'] / dfEdges['count'].max()))
+
+  _worldPlot('world_naive', dfNodes, dfEdges[dfEdges['naive_pred']], lambda row: float(1))
+  _worldPlot('world_cimbala', dfNodes, dfEdges[dfEdges['cimbala_pred']], lambda row: float(1))
+  _worldPlot('world_cimbalaAlt', dfNodes, dfEdges[dfEdges['cimbalaAlt_pred']], lambda row: float(1))
+
+  _worldPlot('world_naive_mean', dfNodes, dfEdges, lambda row: float(row['naive_pred_mean']))
+  _worldPlot('world_cimbala_mean', dfNodes, dfEdges, lambda row: float(row['cimbala_pred_mean']))
+  _worldPlot('world_cimbalaAlt_mean', dfNodes, dfEdges, lambda row: float(row['cimbalaAlt_pred_mean']))

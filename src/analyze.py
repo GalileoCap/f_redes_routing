@@ -7,7 +7,7 @@ from scipy import stats
 
 from cache import Cache
 from process import process
-from plot import worldPlot, graphPlot
+from plot import worldPlot, graphPlot, droppedPlot
 import utils
 from utils import log
 
@@ -54,6 +54,9 @@ def cimbalaMethod(df, column, alpha = 0.05, altCutoff = None):
 #############################################################
 # S: Analyze a single route #################################
 
+dropNa = []
+dropDrtt = []
+
 def analyzeRoute(cache):
   dfName = 'dfA' # TODO: Better name
   df = cache.loadDf(dfName)
@@ -63,13 +66,19 @@ def analyzeRoute(cache):
   log(f'[analyze] fbase={cache.fbase}', level = 'deepDebug')
   df = process(cache)
 
+  preDrop = len(df)
   df.dropna(subset=['src', 'rtt'], inplace = True) # TODO: How many were dropped?
+  dropped = preDrop - len(df)
+  dropNa.append((dropped, dropped / preDrop))
 
+  preDrop = len(df)
   df['drtt'] = df['rtt'].diff()
   df.drop(df[df['drtt'] < 0].index, inplace = True)
   # while df['drtt'].min() < 0:
     # df.drop(df[df['drtt'] < 0].index, inplace = True)
     # df['drtt'] = df['rtt'].diff()
+  dropped = preDrop - len(df)
+  dropDrtt.append((dropped, dropped / preDrop))
 
   naiveMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt')
@@ -159,6 +168,7 @@ def reportAggregate(cache):
   log(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']], level = 'deepUser')
   worldPlot(dfNodes, dfEdges)
   reportGraph(dfNodes, dfEdges, cache)
+  droppedPlot(dropNa, dropDrtt)
 
 ############################################################
 
