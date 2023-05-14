@@ -60,7 +60,7 @@ def analyzeRoute(cache):
   if df is not None:
     return df
 
-  log(f'[analyze] fbase={cache.fbase}', level = 'user')
+  log(f'[analyze] fbase={cache.fbase}', level = 'deepDebug')
   df = process(cache)
 
   df.dropna(subset=['src', 'rtt'], inplace = True) # TODO: How many were dropped?
@@ -82,7 +82,7 @@ def analyzeRoute(cache):
   
 def reportRoute(cache):
   df = analyzeRoute(cache)
-  # print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+  log(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], level = 'deepUser')
   return df
 
 ############################################################
@@ -156,7 +156,7 @@ def reportAggregate(cache):
   cimbalaMethod(dfEdges, 'rtt')
   cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.1) # TODO: altCutoff
 
-  # print(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']])
+  log(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']], level = 'deepUser')
   worldPlot(dfNodes, dfEdges)
   reportGraph(dfNodes, dfEdges, cache)
 

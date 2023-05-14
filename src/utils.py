@@ -6,6 +6,14 @@ import pandas as pd
 OUTDIR = 'out'
 DATADIR = 'data'
 
+logMask = [
+  'user',
+  # 'deepUser',
+  # 'debug',
+  'error',
+  # 'deepDebug',
+]
+
 def mkDirs(fpath):
   os.makedirs(fpath, exist_ok = True)
 def joinPath(*args):
@@ -28,22 +36,22 @@ def getAllDataFiles():
   ]
 
 def savePicklePath(data, fpath):
-  log(f'[savePicklePath] {fpath=}', level = 'debug')
+  log(f'[savePicklePath] {fpath=}', level = 'deepDebug')
   with open(fpath, 'wb') as fout:
     pickle.dump(data, fout)
 def loadPicklePath(fpath):
   if os.path.isfile(fpath):
-    log(f'[loadPicklePath] {fpath=}', level = 'debug')
+    log(f'[loadPicklePath] {fpath=}', level = 'deepDebug')
     with open(fpath, 'rb') as fout:
       return pickle.load(fout)
   return None
 
 def saveDfPath(df, fpath):
-  log(f'[saveDfPath] {fpath=}', level = 'debug')
+  log(f'[saveDfPath] {fpath=}', level = 'deepDebug')
   df.to_csv(fpath)
 def loadDfPath(fpath):
   if os.path.isfile(fpath):
-    log(f'[loadDfPath] {fpath=}', level = 'debug')
+    log(f'[loadDfPath] {fpath=}', level = 'deepDebug')
     return pd.read_csv(fpath, index_col = 0)
   return None
 
@@ -67,6 +75,6 @@ def saveFig(fig, name):
   fig.write_image(fpath)
 
 def log(*args, level):
-  # TODO: Filter
-  print(*args)
+  if level in logMask:
+    print(*args)
 

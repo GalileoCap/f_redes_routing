@@ -29,7 +29,7 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
         break
 
   if len(res) == 0:
-    log(f'[pingTtl] No answers {dst=} {ttl=}', level = 'warning')
+    log(f'[pingTtl] No answers {dst=} {ttl=}', level = 'error')
   return res, success
 
 def traceroute(dst, cache, maxTtl = 64, n = 30, timeout = 0.8, maxRetries = 5):
