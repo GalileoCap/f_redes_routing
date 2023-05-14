@@ -15,6 +15,10 @@ def pklPath(fbase):
   return joinPath(DATADIR, fbase + '.pkl')
 def dfPath(fbase, name):
   return joinPath(OUTDIR, fbase, name + '.csv.tar.gz')
+def htmlPath(name):
+  return joinPath(OUTDIR, name + '.html')
+def svgPath(name):
+  return joinPath(OUTDIR, name + '.svg')
 
 def getAllDataFiles():
   return [
@@ -53,6 +57,14 @@ def saveDf(df, fbase, name):
   return saveDfPath(df, dfPath(fbase, name))
 def loadDf(fbase, name):
   return loadDfPath(dfPath(fbase, name))
+
+def saveFig(fig, name):
+  mkDirs(OUTDIR)
+  fpath = htmlPath(name)
+  fig.write_html(fpath)
+
+  fpath = svgPath(name)
+  fig.write_image(fpath)
 
 def log(*args, level):
   # TODO: Filter

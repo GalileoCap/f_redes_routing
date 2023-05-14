@@ -7,6 +7,7 @@ from scipy import stats
 
 from cache import Cache
 from process import process
+from plot import worldPlot
 import utils
 from utils import log
 
@@ -50,7 +51,10 @@ def cimbalaMethod(df, column, alpha = 0.05, altCutoff = None):
     else: # There are no more outliers
       break
 
-def analyze(cache):
+#############################################################
+# S: Analyze a single route #################################
+
+def analyzeRoute(cache):
   dfName = 'dfA' # TODO: Better name
   df = cache.loadDf(dfName)
   if df is not None:
@@ -75,22 +79,23 @@ def analyze(cache):
   cimbalaMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt', altCutoff = 0.1) # TODO: altCutoff
 
-  addToGraph(df)
+  addRouteToGraph(df)
 
   # cache.saveDf(df, dfName) # TODO: Uncomment once done
   return df
   
-def report(cache):
-  df = analyze(cache)
+def reportRoute(cache):
+  df = analyzeRoute(cache)
   print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+  return df
 
 ############################################################
-# S: Graph #################################################
+# S: Analyze aggregate of all routes #######################
 
 Nodes = {}
 Edges = {}
 
-def addToGraph(df):
+def addRouteToGraph(df):
   def row2Edge(row):
     u = row['src']
     Nodes[u] = Nodes.get(u, []) + [{
@@ -139,13 +144,41 @@ def reportGraph(cache):
   cimbalaMethod(df, 'rtt')
   cimbalaMethod(df, 'rtt', altCutoff = 0.1) # TODO: altCutoff
 
+  worldPlot(G)
+
   print(G)
   print(df[['e', 'count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']])
   # print(G.nodes['200.51.241.1'])
   # print(G.edges['192.168.1.1', '200.51.241.1'])
 
+def reportAggregate(cache):
+  # Calculate aggregate
+  dfNodes = pd.DataFrame([
+    {'count': len(data), **data[0]} # TODO: data[0] check it was labeled the same every time
+    for data in Nodes.values()
+  ], index = Nodes.keys())
+  dfEdges = pd.DataFrame([
+    {
+      'count': len(data),
+      'rtt': np.mean([dataPoint['rtt'] for dataPoint in data]),
+      'length': data[0]['length'], # TODO: Check no differences in location labeling
+      'naive_pred_mean': np.mean([int(dataPoint['naive_pred']) for dataPoint in data]),
+      'cimbala_pred_mean': np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data]),
+      'cimbalaAlt_pred_mean': np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data]),
+
+      'lat': (dfNodes.at[v, 'lat'], dfNodes.at[u, 'lat']),
+      'long': (dfNodes.at[v, 'long'], dfNodes.at[u, 'long']),
+    }
+    for (v, u), data in Edges.items()
+  ], index = Edges.keys())
+
+  worldPlot(dfNodes, dfEdges)
+
+############################################################
+
 if __name__ == '__main__':
   pd.set_option('display.max_columns', None)
+  pd.set_option('display.max_rows', None)
 
   files = sys.argv[1:] if len(sys.argv) >= 2 else utils.getAllDataFiles()
   save = True
@@ -157,5 +190,5 @@ if __name__ == '__main__':
     if cache.loadPickle() is None:
       log('[analyzeCase] No pickle for {fbase}', level = 'error')
     else:
-      report(cache)
-  reportGraph(cache)
+      reportRoute(cache)
+  reportAggregate(cache)
