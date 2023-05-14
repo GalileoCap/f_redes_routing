@@ -7,7 +7,7 @@ from scipy import stats
 
 from cache import Cache
 from process import process
-from plot import worldPlot
+from plot import worldPlot, graphPlot
 import utils
 from utils import log
 
@@ -63,17 +63,13 @@ def analyzeRoute(cache):
   log(f'[analyze] fbase={cache.fbase}', level = 'user')
   df = process(cache)
 
-  df.dropna(subset=['src', 'rtt'], inplace = True)
+  df.dropna(subset=['src', 'rtt'], inplace = True) # TODO: How many were dropped?
 
   df['drtt'] = df['rtt'].diff()
   df.drop(df[df['drtt'] < 0].index, inplace = True)
   # while df['drtt'].min() < 0:
     # df.drop(df[df['drtt'] < 0].index, inplace = True)
     # df['drtt'] = df['rtt'].diff()
-
-  df['dlat'] = df['lat'].diff()
-  df['dlong'] = df['long'].diff()
-  df['distance'] = np.sqrt(df['dlat'] ** 2 + df['dlong'] ** 2)
 
   naiveMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt')
@@ -86,7 +82,7 @@ def analyzeRoute(cache):
   
 def reportRoute(cache):
   df = analyzeRoute(cache)
-  print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
+  # print(df[['src', 'country', 'rtt', 'drtt', 'naive_pred', 'cimbala_pred', 'cimbalaAlt_pred']], sep = '\n')
   return df
 
 ############################################################
@@ -115,43 +111,27 @@ def addRouteToGraph(df):
       }]
 
   df['prev'] = df['src'].shift(1)
-  df['idx'] = df.index # Hack to use index in row2Edge
+  df['distance'] = np.sqrt(df['lat'].diff() ** 2 + df['long'].diff() ** 2)
+
   df.apply(row2Edge, axis = 'columns')
-  df.drop('idx', axis = 'columns', inplace = True)
+  df.drop(['prev', 'distance'], axis = 'columns', inplace = True)
 
-def reportGraph(cache):
-  # TODO: Save graphData
+def reportGraph(dfNodes, dfEdges, cache):
+  # TODO: Cache
+
   G = nx.Graph()
-  for v, data in Nodes.items():
-    G.add_node(v, count = len(data), **data[0]) # TODO: Check no differences in location labeling
+  for v, row in dfNodes.iterrows():
+    G.add_node(v, **row.to_dict())
 
-  edgesData = []
-  for e, data in Edges.items():
-    _data = {
-      'e': e,
-      'count': len(data),
-      'rtt': np.mean([dataPoint['rtt'] for dataPoint in data]),
-      'length': data[0]['length'], # TODO: Check no differences in location labeling
-      'naive_pred_mean': np.mean([int(dataPoint['naive_pred']) for dataPoint in data]),
-      'cimbala_pred_mean': np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data]),
-      'cimbalaAlt_pred_mean': np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data]),
-    }
-    edgesData.append(_data)
-    G.add_edge(*e, **_data)
-
-  df = pd.DataFrame(edgesData)
-  naiveMethod(df, 'rtt')
-  cimbalaMethod(df, 'rtt')
-  cimbalaMethod(df, 'rtt', altCutoff = 0.1) # TODO: altCutoff
-
-  worldPlot(G)
-
-  print(G)
-  print(df[['e', 'count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']])
-  # print(G.nodes['200.51.241.1'])
-  # print(G.edges['192.168.1.1', '200.51.241.1'])
+  for (v, u), row in dfEdges.iterrows():
+    G.add_edge(v, u, **row.to_dict())
+  
+  log(G, level = 'user')
+  graphPlot(G, dfNodes, dfEdges)
 
 def reportAggregate(cache):
+  # TODO: Cache
+
   # Calculate aggregate
   dfNodes = pd.DataFrame([
     {'count': len(data), **data[0]} # TODO: data[0] check it was labeled the same every time
@@ -172,13 +152,19 @@ def reportAggregate(cache):
     for (v, u), data in Edges.items()
   ], index = Edges.keys())
 
+  naiveMethod(dfEdges, 'rtt')
+  cimbalaMethod(dfEdges, 'rtt')
+  cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.1) # TODO: altCutoff
+
+  # print(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']])
   worldPlot(dfNodes, dfEdges)
+  reportGraph(dfNodes, dfEdges, cache)
 
 ############################################################
 
 if __name__ == '__main__':
-  pd.set_option('display.max_columns', None)
-  pd.set_option('display.max_rows', None)
+  # pd.set_option('display.max_columns', None)
+  # pd.set_option('display.max_rows', None)
 
   files = sys.argv[1:] if len(sys.argv) >= 2 else utils.getAllDataFiles()
   save = True
