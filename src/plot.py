@@ -10,14 +10,22 @@ import utils
 def droppedPlot(dropNa, dropDrtt):
   fig = go.Figure(go.Histogram(
     # x = [total for total, _ in dropNa]
-    x = [pct for _, pct in dropNa]
+    x = [100 * pct for _, pct in dropNa]
   ))
+  fig.update_layout(
+    xaxis_title = 'Porcentaje de paquetes no respondidos',
+    yaxis_title = 'Cantidad',
+  )
   utils.saveFig(fig, 'dropNa')
 
   fig = go.Figure(go.Histogram(
     # x = [total for total, _ in dropDrtt]
-    x = [pct for _, pct in dropDrtt]
+    x = [100 * pct for _, pct in dropDrtt]
   ))
+  fig.update_layout(
+    xaxis_title = 'Porcentaje de RTT que dieron negativo',
+    yaxis_title = 'Cantidad',
+  )
   utils.saveFig(fig, 'dropDrtt')
 
 ############################################################

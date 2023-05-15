@@ -59,9 +59,9 @@ dropDrtt = []
 
 def analyzeRoute(cache):
   dfName = 'dfA' # TODO: Better name
-  df = cache.loadDf(dfName)
-  if df is not None:
-    return df
+  # df = cache.loadDf(dfName)
+  # if df is not None:
+    # return df
 
   log(f'[analyze] fbase={cache.fbase}', level = 'deepDebug')
   df = process(cache)
