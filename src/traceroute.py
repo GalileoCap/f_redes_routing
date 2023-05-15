@@ -25,7 +25,7 @@ def pingTtl(dst, ttl, n = 30, timeout = 0.8, maxRetries = 5):
 
       if ans is not None:
         res.append({'src': ans.src, 'rtt': rtt})
-        success |= ans[scapy.ICMP].type == 0 # TODO: Check this is correct
+        success |= ans[scapy.ICMP].type == 0
         break
 
   if len(res) == 0:
@@ -71,7 +71,6 @@ if __name__ == '__main__':
 
   threads = []
   for idx, tHosts in enumerate(np.array_split(hosts, 10)):
-    # t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase), kwargs = {'maxTtl': 5, 'n': 1}) # TODO: Remove kwargs to use default
     t = threading.Thread(target = tracerouteHosts, args = (tHosts, fbase))
     threads.append(t)
     t.start()

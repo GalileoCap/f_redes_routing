@@ -7,7 +7,7 @@ from cache import Cache
 def getLocation(src):
   response = requests.get(f'https://dazzlepod.com/ip/{src}.json')
   json = response.json()
-  return [json.get(key, None) for key in ['country', 'city', 'latitude', 'longitude']] # TODO: Handle error
+  return [json.get(key, None) for key in ['country', 'city', 'latitude', 'longitude']]
 
 def getBestSrc(data):
   df = pd.DataFrame(data)
@@ -34,7 +34,7 @@ def process(cache):
     for data in hostData
   ])
 
-  df.dropna(subset=['src'], inplace = True) # TODO: Do something with missing hops
+  df.dropna(subset=['src'], inplace = True) # TODO: Do something with missing hops?
 
   cache.saveDf(df, dfName)
   return df

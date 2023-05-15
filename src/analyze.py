@@ -67,7 +67,7 @@ def analyzeRoute(cache):
   df = process(cache)
 
   preDrop = len(df)
-  df.dropna(subset=['src', 'rtt'], inplace = True) # TODO: How many were dropped?
+  df.dropna(subset=['src', 'rtt'], inplace = True)
   dropped = preDrop - len(df)
   dropNa.append((dropped, dropped / preDrop))
 
@@ -82,7 +82,7 @@ def analyzeRoute(cache):
 
   naiveMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt')
-  cimbalaMethod(df, 'drtt', altCutoff = 0.02) # TODO: altCutoff
+  cimbalaMethod(df, 'drtt', altCutoff = 0.02)
 
   addRouteToGraph(df)
 
@@ -143,14 +143,14 @@ def reportAggregate(cache):
 
   # Calculate aggregate
   dfNodes = pd.DataFrame([
-    {'count': len(data), **data[0]} # TODO: data[0] check it was labeled the same every time
+    {'count': len(data), **data[0]}
     for data in Nodes.values()
   ], index = Nodes.keys())
   dfEdges = pd.DataFrame([
     {
       'count': len(data),
       'rtt': np.mean([dataPoint['rtt'] for dataPoint in data]),
-      'length': data[0]['length'], # TODO: Check no differences in location labeling
+      'length': data[0]['length'],
       'naive_pred_mean': np.mean([int(dataPoint['naive_pred']) for dataPoint in data]),
       'cimbala_pred_mean': np.mean([int(dataPoint['cimbala_pred']) for dataPoint in data]),
       'cimbalaAlt_pred_mean': np.mean([int(dataPoint['cimbalaAlt_pred']) for dataPoint in data]),
@@ -163,7 +163,7 @@ def reportAggregate(cache):
 
   naiveMethod(dfEdges, 'rtt')
   cimbalaMethod(dfEdges, 'rtt')
-  cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.02) # TODO: altCutoff
+  cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.02)
 
   log(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']], level = 'deepUser')
   worldPlot(dfNodes, dfEdges)
