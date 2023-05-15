@@ -25,8 +25,8 @@ def dfPath(fbase, name):
   return joinPath(OUTDIR, fbase, name + '.csv.tar.gz')
 def htmlPath(name):
   return joinPath(OUTDIR, name + '.html')
-def svgPath(name):
-  return joinPath(OUTDIR, name + '.svg')
+def imgPath(name):
+  return joinPath(OUTDIR, name + '.pdf')
 
 def getAllDataFiles():
   return [
@@ -71,7 +71,7 @@ def saveFig(fig, name):
   fpath = htmlPath(name)
   fig.write_html(fpath)
 
-  fpath = svgPath(name)
+  fpath = imgPath(name)
   fig.write_image(fpath)
 
 def log(*args, level):

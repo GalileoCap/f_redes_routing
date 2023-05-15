@@ -86,7 +86,7 @@ def analyzeRoute(cache):
 
   addRouteToGraph(df)
 
-  # cache.saveDf(df, dfName) # TODO: Uncomment once done
+  cache.saveDf(df, dfName)
   return df
   
 def reportRoute(cache):
@@ -186,5 +186,8 @@ if __name__ == '__main__':
     if cache.loadPickle() is None:
       log('[analyzeCase] No pickle for {fbase}', level = 'error')
     else:
-      reportRoute(cache)
+      try:
+        reportRoute(cache)
+      except:
+        pass
   reportAggregate(cache)
