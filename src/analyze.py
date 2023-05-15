@@ -14,7 +14,7 @@ from utils import log
 #############################################################
 # S: Our naive method #######################################
 
-def naiveMethod(df, column, cutoff = 0.1):
+def naiveMethod(df, column, cutoff = 0.07):
   df['naive_pred'] = df[column] >= cutoff
 
 #############################################################
@@ -82,7 +82,7 @@ def analyzeRoute(cache):
 
   naiveMethod(df, 'drtt')
   cimbalaMethod(df, 'drtt')
-  cimbalaMethod(df, 'drtt', altCutoff = 0.1) # TODO: altCutoff
+  cimbalaMethod(df, 'drtt', altCutoff = 0.02) # TODO: altCutoff
 
   addRouteToGraph(df)
 
@@ -163,7 +163,7 @@ def reportAggregate(cache):
 
   naiveMethod(dfEdges, 'rtt')
   cimbalaMethod(dfEdges, 'rtt')
-  cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.1) # TODO: altCutoff
+  cimbalaMethod(dfEdges, 'rtt', altCutoff = 0.02) # TODO: altCutoff
 
   log(dfEdges[['count', 'rtt', 'naive_pred', 'naive_pred_mean', 'cimbala_pred', 'cimbala_pred_mean', 'cimbalaAlt_pred', 'cimbalaAlt_pred_mean']], level = 'deepUser')
   worldPlot(dfNodes, dfEdges)
